@@ -1,0 +1,1092 @@
+
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generatore Verifiche Informatica - Borzumati</title>
+    <!-- Carica Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .code-font { font-family: 'Roboto Mono', monospace; }
+        .code-block { background-color: #1e293b; color: #f8fafc; padding: 0.75rem; border-radius: 0.5rem; overflow-x: auto; }
+
+        /* Stili per la stampa PDF (ottimizzazione 2 pagine A4) */
+        @media print {
+            body { font-family: sans-serif !important; font-size: 10pt; background: white !important; }
+            body > *:not(.print-container) { display: none !important; }
+            .print-container { 
+                display: block !important; 
+                max-width: none !important; 
+                margin: 0 !important; 
+                padding: 0 !important; 
+                box-shadow: none !important; 
+                height: auto;
+            }
+            @page { margin: 1cm; }
+            
+            .print-header { border-bottom: 2px solid #6366f1; padding-bottom: 0.5rem; margin-bottom: 1rem; }
+            .print-header h1 { font-size: 14pt !important; font-weight: bold; }
+            .print-header p { font-size: 9pt !important; color: #374151; }
+            
+            .question-item { 
+                margin-bottom: 1.2rem; 
+                page-break-inside: avoid;
+                border-left: 3px solid #6366f1;
+                padding-left: 0.5rem;
+                counter-increment: question-counter;
+            }
+            .question-item::before {
+                content: counter(question-counter) ". ";
+                font-weight: bold;
+                margin-right: 0.25rem;
+            }
+            .question-text { font-weight: 700; color: #1f2937; margin-bottom: 0.3rem; }
+            .answer-line { 
+                height: 1.2em; 
+                display: block; 
+                border-bottom: 1px dashed #9ca3af; 
+                width: 100%; 
+                margin-top: 0.2rem; 
+            }
+            .solution-box { 
+                border: 1px solid #10b981; 
+                background-color: #d1fae5; 
+                padding: 0.2rem 0.5rem; 
+                border-radius: 4px; 
+                margin-top: 0.4rem; 
+                font-size: 9pt;
+            }
+        }
+
+        /* Stili per i pulsanti animati */
+        .action-button { transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); font-weight: 700; position: relative; overflow: hidden; }
+        .action-button:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3); }
+        .action-button::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.2); transform: skewX(-20deg); transition: all 0.7s; }
+        .action-button:hover::before { left: 100%; }
+        .bg-gradient-blue { background-image: linear-gradient(to right, #4c66ff 0%, #00c6ff 100%); }
+        .bg-gradient-green { background-image: linear-gradient(to right, #10b981 0%, #1d7c4c 100%); }
+    </style>
+</head>
+<body class="bg-gray-900 min-h-screen p-4 sm:p-8">
+
+    <!-- Area di caricamento -->
+    <div id="loading-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-90 z-50 flex items-center justify-center hidden">
+        <div class="text-center text-white">
+            <svg class="animate-spin h-10 w-10 text-indigo-400 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="text-lg font-semibold">Caricamento dati in corso... (Connessione a Firebase)</p>
+        </div>
+    </div>
+    
+    <!-- Sezione Dati Studente/Docente e Introduzione -->
+    <div id="main-view" class="w-full max-w-7xl mx-auto bg-white rounded-xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] p-6 sm:p-12 mb-8 space-y-10">
+        <header class="text-center pb-6 border-b-4 border-indigo-500">
+            <h1 class="text-4xl sm:text-6xl font-black leading-tight">
+                <span class="bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-purple-600"> GENERATORE VERIFICHE INFORMATICA </span>
+            </h1>
+            <p class="text-xl text-gray-700 mt-2">Prof. Giuseppe Borzumati | 11 Domande Miste Pratica + Teoria Complessa</p>
+        </header>
+
+        <!-- Dati Studente per la Generazione (Globali) -->
+        <div class="bg-indigo-50 p-8 rounded-2xl shadow-inner border border-indigo-200">
+            <h2 class="text-2xl font-bold text-indigo-800 mb-5 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-7 h-7 mr-2 text-indigo-600">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                </svg> 
+                Dati Base
+                <span id="teacher-id" class="code-font text-xs ml-4 p-1 bg-indigo-200 text-indigo-800 rounded"></span>
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div> <input type="text" id="nome-studente" placeholder="Nome" class="p-4 border-2 border-indigo-300 rounded-xl w-full focus:ring-indigo-500 focus:border-indigo-500 text-lg"> </div>
+                <div> <input type="text" id="cognome-studente" placeholder="Cognome" class="p-4 border-2 border-indigo-300 rounded-xl w-full focus:ring-indigo-500 focus:border-indigo-500 text-lg"> </div>
+                <div> <input type="text" id="classe-studente" placeholder="Classe (es. 4B)" class="p-4 border-2 border-indigo-300 rounded-xl w-full focus:ring-indigo-500 focus:border-indigo-500 text-lg"> </div>
+                <div> <input type="date" id="data-verifica" value="" class="p-4 border-2 border-indigo-300 rounded-xl w-full focus:ring-indigo-500 focus:border-indigo-500 text-lg"> </div>
+            </div>
+            <p class="text-sm text-indigo-600 mt-4 font-semibold">Tutti i campi sono obbligatori per generare il link di correzione.</p>
+        </div>
+
+        <!-- Contenitore delle Verifiche (4 Blocchi) -->
+        <div class="space-y-12">
+
+            <!-- BLOCCO 1: Verifiche Numeriche PURE -->
+            <div id="blocco-verifica-a" class="p-8 bg-red-50 border-t-8 border-t-red-500 rounded-2xl shadow-3xl">
+                <h3 class="text-3xl font-bold text-red-700 mb-4 flex items-center">
+                    <span class="mr-3 text-4xl">🔢</span> VERIFICA A: Sistemi di Numerazione Base & Operazioni
+                </h3>
+                <p class="text-gray-600 mb-6">Tracce: Conversione Base (2, 8, 10, 16), Frazioni Binarie, Numeri Romani e Operazioni Binaria. (11 Domande Miste)</p>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <button class="flex-1 action-button bg-gradient-blue text-white py-4 px-8 rounded-xl text-xl" onclick="handleGeneration('A', true)"> 📄 Genera PDF Alunno </button>
+                    <button class="flex-1 action-button bg-gradient-green text-white py-4 px-8 rounded-xl text-xl" onclick="handleGeneration('A', false)"> 🎓 Genera PDF Docente (Soluzioni) </button>
+                </div>
+                <div id="link-container-A" class="mt-6 space-y-3">
+                    <h4 class="text-lg font-semibold text-red-600 border-b border-red-300 pb-1">Link di Correzione Generati (Verifica A):</h4>
+                    <p class="text-sm text-gray-500" id="link-message-A">Nessuna verifica di Tipo A generata.</p>
+                </div>
+            </div>
+
+            <!-- BLOCCO 2: A + Networking Semplice -->
+            <div id="blocco-verifica-b" class="p-8 bg-purple-50 border-t-8 border-t-purple-500 rounded-2xl shadow-3xl">
+                <h3 class="text-3xl font-bold text-purple-700 mb-4 flex items-center">
+                    <span class="mr-3 text-4xl">🌐</span> VERIFICA B: Sistemi di Numerazione + Networking Semplice
+                </h3>
+                <p class="text-gray-600 mb-6">Tracce: Contenuti della Verifica A + Subnetting Semplice (CIDR, Network/Broadcast ID, Maschera). (11 Domande Miste)</p>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <button class="flex-1 action-button bg-gradient-blue text-white py-4 px-8 rounded-xl text-xl" onclick="handleGeneration('B', true)"> 📄 Genera PDF Alunno </button>
+                    <button class="flex-1 action-button bg-gradient-green text-white py-4 px-8 rounded-xl text-xl" onclick="handleGeneration('B', false)"> 🎓 Genera PDF Docente (Soluzioni) </button>
+                </div>
+                <div id="link-container-B" class="mt-6 space-y-3">
+                    <h4 class="text-lg font-semibold text-purple-600 border-b border-purple-300 pb-1">Link di Correzione Generati (Verifica B):</h4>
+                    <p class="text-sm text-gray-500" id="link-message-B">Nessuna verifica di Tipo B generata.</p>
+                </div>
+            </div>
+
+            <!-- BLOCCO 3: A + Networking Semplice (uguale a B per bilanciamento) -->
+            <div id="blocco-verifica-c" class="p-8 bg-teal-50 border-t-8 border-t-teal-500 rounded-2xl shadow-3xl">
+                <h3 class="text-3xl font-bold text-teal-700 mb-4 flex items-center">
+                    <span class="mr-3 text-4xl">🔬</span> VERIFICA C: Sistemi di Numerazione + Networking Semplice
+                </h3>
+                <p class="text-gray-600 mb-6">Tracce: Contenuti della Verifica A + Subnetting Semplice (CIDR, Network/Broadcast ID, Maschera). (11 Domande Miste) - Ideale per un'alternativa alla B.</p>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <button class="flex-1 action-button bg-gradient-blue text-white py-4 px-8 rounded-xl text-xl" onclick="handleGeneration('C', true)"> 📄 Genera PDF Alunno </button>
+                    <button class="flex-1 action-button bg-gradient-green text-white py-4 px-8 rounded-xl text-xl" onclick="handleGeneration('C', false)"> 🎓 Genera PDF Docente (Soluzioni) </button>
+                </div>
+                <div id="link-container-C" class="mt-6 space-y-3">
+                    <h4 class="text-lg font-semibold text-teal-600 border-b border-teal-300 pb-1">Link di Correzione Generati (Verifica C):</h4>
+                    <p class="text-sm text-gray-500" id="link-message-C">Nessuna verifica di Tipo C generata.</p>
+                </div>
+            </div>
+            
+            <!-- BLOCCO 4: Riepilogo Completo e Problemi Critici (Verifica D) -->
+            <div id="blocco-verifica-d" class="p-8 bg-yellow-50 border-t-8 border-t-yellow-500 rounded-2xl shadow-3xl">
+                <h3 class="text-3xl font-bold text-yellow-800 mb-4 flex items-center">
+                    <span class="mr-3 text-4xl">⭐</span> VERIFICA D: Riepilogo Completo (Complemento a 2, Floating Point, IP Avanzato)
+                </h3>
+                <p class="text-gray-600 mb-6">Tracce: Mix di tutti gli argomenti avanzati: Complemento a Due, Floating Point e Subnetting complesso (VLSM/CIDR). (11 Domande Miste)</p>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <button class="flex-1 action-button bg-gradient-blue text-white py-4 px-8 rounded-xl text-xl" onclick="handleGeneration('D', true)"> 📄 Genera PDF Alunno </button>
+                    <button class="flex-1 action-button bg-gradient-green text-white py-4 px-8 rounded-xl text-xl" onclick="handleGeneration('D', false)"> 🎓 Genera PDF Docente (Soluzioni) </button>
+                </div>
+                <div id="link-container-D" class="mt-6 space-y-3">
+                    <h4 class="text-lg font-semibold text-yellow-600 border-b border-yellow-300 pb-1">Link di Correzione Generati (Verifica D):</h4>
+                    <p class="text-sm text-gray-500" id="link-message-D">Nessuna verifica di Tipo D generata.</p>
+                </div>
+            </div>
+
+        </div>
+
+        <footer class="text-center pt-8 text-gray-500 text-sm border-t border-gray-200">
+            <p>Sistema di Generazione Verifiche v5.2 | Per l'Insegnante Giuseppe Borzumati. Assicurati che il pop-up del browser sia consentito per scaricare il PDF.</p>
+        </footer>
+    </div>
+
+    <!-- VISTA DI CORREZIONE (Caricata tramite link condivisibile) -->
+    <div id="correction-view" class="hidden w-full max-w-5xl mx-auto bg-white rounded-xl shadow-2xl p-6 sm:p-10 mb-8 space-y-8">
+        <header class="text-center pb-4 border-b-4 border-green-500">
+            <h1 class="text-4xl font-extrabold text-green-700 leading-tight">Griglia di Correzione Interattiva</h1>
+            <p class="text-lg text-gray-600 mt-1">
+                Studente: <span id="corr-student-name" class="font-extrabold text-indigo-600"></span> - 
+                Classe: <span id="corr-class" class="font-extrabold text-indigo-600"></span> - 
+                Verifica <span id="corr-title" class="font-bold"></span>
+            </p>
+        </header>
+
+        <!-- Tabella Punteggio e Voto -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 bg-yellow-50 p-6 rounded-xl border-2 border-yellow-300 shadow-lg">
+            <div class="col-span-1 lg:col-span-3">
+                <h2 class="text-2xl font-bold text-yellow-800 mb-2 border-b border-yellow-400 pb-1">Valutazione</h2>
+            </div>
+            
+            <div class="bg-blue-100 p-4 rounded-lg shadow-md">
+                <p class="text-sm font-semibold text-blue-800">Punti Ottenuti:</p>
+                <p class="text-4xl font-extrabold text-blue-600 mt-1"><span id="corr-points">0</span> / <span id="corr-max-points">11</span></p>
+            </div>
+            
+            <div class="bg-purple-100 p-4 rounded-lg shadow-md">
+                <p class="text-sm font-semibold text-purple-800">Voto Orale (Base 10):</p>
+                <input type="number" id="voto-orale" min="0" max="10" step="0.1" value="6.0" onchange="updateFinalGrade()" class="p-2 border-2 border-purple-500 rounded-lg w-full mt-1 text-xl font-bold">
+            </div>
+            
+            <div class="bg-red-100 p-4 rounded-lg shadow-md">
+                <p class="text-sm font-semibold text-red-800">Voto Finale (Arrotondato per Difetto):</p>
+                <p class="text-4xl font-extrabold text-red-600 mt-1"><span id="corr-grade-floored">0</span> / 10</p>
+            </div>
+            
+            <div class="col-span-1 lg:col-span-3 bg-gray-100 p-4 rounded-lg border border-gray-300" id="conversion-explanation">
+                <p class="text-sm font-bold text-gray-700">Formula di Calcolo:</p>
+                <code class="code-font text-xs block mt-1 p-2 bg-white rounded"> Voto Scritto Base 10 = (Punti Ottenuti / 11) * 10 = <span id="voto-scritto-base">0.00</span> </code>
+                <code class="code-font text-xs block mt-1 p-2 bg-white rounded"> Voto Finale = (Voto Scritto * 0.7) + (Voto Orale * 0.3) </code>
+            </div>
+        </div>
+
+        <!-- Esercizi con Correzione -->
+        <div id="correction-form" class="space-y-6"> 
+            <!-- Gli esercizi e i campi di input saranno popolati qui dal JS -->
+        </div>
+
+        <button class="action-button bg-gradient-blue text-white py-4 px-8 rounded-xl text-lg mt-8 w-full" onclick="saveAndDownloadResultsPDF()"> Salva Risultati e Scarica PDF dei Commenti </button>
+        <button class="action-button bg-gray-400 hover:bg-gray-500 text-gray-900 py-3 px-6 rounded-lg text-lg w-full" onclick="window.location.href = window.location.origin + window.location.pathname"> Torna alla Generazione Verifiche </button>
+    </div>
+
+    <!-- Contenitore Nascosto per la Stampa PDF (Stile ottimizzato per PDF) -->
+    <div id="print-area" class="print-container hidden"></div>
+
+    <!-- Firebase SDK Imports -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, query, where, getDocs, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // Imposta il livello di log per debug
+        setLogLevel('Debug');
+
+        // Variabili Globali del Modulo
+        window.db = null;
+        window.auth = null;
+        window.teacherId = null;
+        window.MAX_POINTS = 11; // Punti massimi per la verifica (1 punto per domanda)
+
+        // Configurazione Firebase: Usa le variabili globali se disponibili, altrimenti il fallback fornito dall'utente.
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "AIzaSyDtruKdnoFjMqob-1zf-Zw0hXn8j_YwVio",
+            authDomain: "verifichenumeribinari.firebaseapp.com",
+            projectId: "verifichenumeribinari",
+            storageBucket: "verifichenumeribinari.firebasestorage.app",
+            messagingSenderId: "648812468179",
+            appId: "1:648812468179:web:1a0e2d65cb1aae28e60126",
+            measurementId: "G-K5SL1808G4"
+        };
+        
+        // Variabile ID App (usata per il path Firestore)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        // Funzione di Inizializzazione Firebase
+        async function initializeFirebase() {
+            try {
+                // 1. Inizializzazione App
+                const app = initializeApp(firebaseConfig);
+                window.db = getFirestore(app);
+                window.auth = getAuth(app);
+
+                // 2. Autenticazione Anonima o con Token
+                if (typeof __initial_auth_token !== 'undefined') {
+                    await signInWithCustomToken(window.auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(window.auth);
+                }
+                
+                window.teacherId = window.auth.currentUser.uid;
+                
+                // 3. Nascondi Overlay e Avvia l'app
+                document.getElementById('loading-overlay').classList.add('hidden');
+                document.getElementById('teacher-id').textContent = `Docente ID: ${window.teacherId.substring(0, 8)}...`;
+
+                // 4. Carica i link di correzione esistenti
+                await window.updateLinkContainers();
+
+                // 5. Verifica se è una vista di correzione
+                const urlParams = new URLSearchParams(window.location.search);
+                const examId = urlParams.get('examId');
+                if (examId) {
+                    window.showLoading();
+                    await window.loadCorrectionView(examId);
+                } else {
+                    window.showMainView();
+                }
+
+            } catch (error) {
+                console.error("Errore fatale nell'inizializzazione di Firebase e Auth:", error);
+                // Sostituisci alert() con un messaggio sulla console o un modale custom
+                const errorMsg = "Errore di connessione al database. Controlla la console per i dettagli. (ID App: " + appId + ")";
+                console.log(errorMsg);
+                document.getElementById('loading-overlay').classList.add('hidden');
+            }
+        }
+
+        // Metodo per ottenere il path corretto per Firestore (pubblico)
+        window.getExamCollectionRef = () => {
+             return collection(window.db, "artifacts", appId, "public", "data", "exams");
+        };
+
+        // ESPORTA LE FUNZIONI DI FIRESTORE NEL CONTESTO GLOBALE
+        window.getDoc = getDoc;
+        window.setDoc = setDoc;
+        window.doc = doc;
+        window.collection = collection;
+        window.query = query;
+        window.where = where;
+        window.getDocs = getDocs;
+
+        // Esegui l'inizializzazione al caricamento
+        window.addEventListener('load', () => {
+            initializeFirebase();
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('data-verifica').value = today;
+            document.getElementById('corr-max-points').textContent = window.MAX_POINTS;
+        });
+    </script>
+    
+    <script>
+        // -------------------------------------------------------------------------
+        // LOGICA DI VISTA E UTILITY
+        // -------------------------------------------------------------------------
+
+        let currentExamData = null; // Dati della verifica attualmente in correzione
+        
+        window.showLoading = () => document.getElementById('loading-overlay').classList.remove('hidden');
+        window.hideLoading = () => document.getElementById('loading-overlay').classList.add('hidden');
+
+        // Navigazione tra le viste
+        window.showMainView = () => {
+            document.getElementById('main-view').classList.remove('hidden');
+            document.getElementById('correction-view').classList.add('hidden');
+            window.hideLoading();
+        };
+
+        // Funzione per generare un ID unico
+        const generateUniqueID = () => Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
+
+        // Funzione per pulire e standardizzare le risposte (tolleranza)
+        const cleanAnswer = (s) => s.toString()
+            .trim()
+            .toUpperCase()
+            .replace(/[^A-Z0-9\.\/\;\-\+\s]/g, '') // Rimuove caratteri non validi
+            .replace(/\s+/g, ''); // Rimuove tutti gli spazi
+
+        // -------------------------------------------------------------------------
+        // FUNZIONI NUMERICHE DI CALCOLO (CRITICHE)
+        // -------------------------------------------------------------------------
+
+        // Genera un numero intero casuale in un range (incluso)
+        const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+        // Funzione per generare un numero binario con parte frazionaria
+        function generateBinaryFractional(intBits, fracBits) {
+            const integerPart = randInt(1, Math.pow(2, intBits) - 1);
+            let fractionalValue = 0;
+            let binFractional = '';
+            let tempFrac = Math.random(); 
+            
+            for (let i = 0; i < fracBits; i++) {
+                tempFrac *= 2;
+                let bit = Math.floor(tempFrac);
+                binFractional += bit;
+                fractionalValue += bit * Math.pow(2, -(i + 1));
+                tempFrac -= bit;
+            }
+
+            const decimalValue = integerPart + fractionalValue;
+            const binaryValue = integerPart.toString(2) + '.' + binFractional;
+            
+            return { decimal: parseFloat(decimalValue.toFixed(4)), binary: binaryValue };
+        }
+
+        // Funzione per calcolare il Complemento a Due (8 bit)
+        function toTwosComplement(num) {
+            if (num >= 127 || num < -128) return 'OVERFLOW';
+            if (num >= 0) {
+                return num.toString(2).padStart(8, '0');
+            }
+            
+            const absNum = Math.abs(num);
+            let bin = absNum.toString(2).padStart(8, '0');
+            
+            // 1. Inverti i bit
+            let inverted = [...bin].map(b => b === '0' ? '1' : '0').join('');
+            
+            // 2. Aggiungi 1 (in binario)
+            let carry = 1;
+            let twosComp = '';
+            for (let i = 7; i >= 0; i--) {
+                let bit = parseInt(inverted[i], 10);
+                let sum = bit + carry;
+                twosComp = (sum % 2) + twosComp;
+                carry = Math.floor(sum / 2);
+            }
+            return twosComp;
+        }
+
+        // Calcolo Notazione Scientifica Binaria (Floating Point Semplificato - Mantissa 14 bit, Esponente offset 7)
+        function calculateFloatingPoint(dec) {
+            let num = Math.abs(dec);
+            if (num === 0) return { exponent: 0, mantissa: '0'.repeat(14) };
+
+            let integerPart = Math.floor(num);
+            let fractionalPart = num - integerPart;
+            
+            let binary = integerPart.toString(2);
+            let fracBin = '';
+            let tempFrac = fractionalPart;
+
+            // Genera la parte frazionaria binaria
+            for (let i = 0; i < 20; i++) {
+                tempFrac *= 2;
+                let bit = Math.floor(tempFrac);
+                fracBin += bit;
+                tempFrac -= bit;
+            }
+            binary += '.' + fracBin;
+
+            let exponent;
+            let mantissa;
+            
+            let firstOneIndex = binary.indexOf('1');
+            let dotIndex = binary.indexOf('.');
+
+            if (dotIndex === -1) dotIndex = binary.length; // Per interi puri
+
+            if (firstOneIndex === -1) { // Solo zeri (già gestito da num === 0)
+                return { exponent: 0, mantissa: '0'.repeat(14) };
+            }
+            
+            if (dotIndex > firstOneIndex) {
+                // Numero >= 1. Sposta la virgola a sinistra.
+                exponent = dotIndex - firstOneIndex - 1;
+            } else {
+                // Numero < 1. Sposta la virgola a destra.
+                exponent = dotIndex - firstOneIndex;
+            }
+
+            // Normalizza (rimuovi il punto e il primo '1' implicito)
+            let normalized = binary.replace('.', '');
+            let mantissaStart = normalized.substring(firstOneIndex + 1);
+            
+            mantissa = mantissaStart.padEnd(14, '0').substring(0, 14);
+
+            return { exponent, mantissa };
+        }
+
+        // Funzione per calcolare ID Rete/Broadcast
+        function calculateNetworkIDs(ip, mask) {
+            const octets = ip.split('.').map(o => parseInt(o));
+            const ipBin = octets.map(o => o.toString(2).padStart(8, '0')).join('');
+            
+            const networkPart = ipBin.substring(0, mask);
+            
+            // Network ID (host part = 0)
+            const netIDBinary = networkPart.padEnd(32, '0');
+            let networkID = [];
+            for (let n = 0; n < 4; n++) {
+                networkID.push(parseInt(netIDBinary.substring(n * 8, n * 8 + 8), 2));
+            }
+            const netID = networkID.join('.');
+
+            // Broadcast ID (host part = 1)
+            const hostPart = '1'.repeat(32 - mask);
+            const broadcastBinary = networkPart + hostPart;
+            let broadcastID = [];
+            for (let n = 0; n < 4; n++) {
+                broadcastID.push(parseInt(broadcastBinary.substring(n * 8, n * 8 + 8), 2));
+            }
+            const bcastID = broadcastID.join('.');
+            
+            // Maschera decimale
+            const maskBin = '1'.repeat(mask).padEnd(32, '0');
+            let maskDec = [];
+            for (let n = 0; n < 4; n++) {
+                maskDec.push(parseInt(maskBin.substring(n * 8, n * 8 + 8), 2));
+            }
+            const subnetMask = maskDec.join('.');
+
+            return { network: netID, broadcast: bcastID, mask: subnetMask };
+        }
+
+        // Conversione Decimale a Romano (fino a 999)
+        function decToRoman(num) {
+            const map = { 1000: 'M', 900: 'CM', 500: 'D', 400: 'CD', 100: 'C', 90: 'XC', 50: 'L', 40: 'XL', 10: 'X', 9: 'IX', 5: 'V', 4: 'IV', 1: 'I' };
+            let roman = '';
+            for (let i of Object.keys(map).map(Number).sort((a, b) => b - a)) {
+                while (num >= i) {
+                    roman += map[i];
+                    num -= i;
+                }
+            }
+            return roman;
+        }
+
+        // -------------------------------------------------------------------------
+        // POOL DI GENERATORI DI DOMANDE MISTE (11)
+        // -------------------------------------------------------------------------
+
+        function generateMixedQuestion(qNum) {
+            let question = {};
+            let num1, num2, ip, mask, result, type;
+
+            switch (qNum % 11) {
+                // Q1: Conversione Decimale a Binario + Teoria
+                case 0:
+                    num1 = randInt(150, 511);
+                    result = num1.toString(2);
+                    type = 'Base (10->2)';
+                    question.text = `**PARTE PRATICA:** Converti il numero Decimale **${num1}** in **Binario** (base 2). 
+                        **PARTE TEORICA:** Spiega in modo dettagliato come la grandezza del numero di bit utilizzati influenzi la **risoluzione** (precisione) e l'**intervallo** (range) dei valori rappresentabili. Fornisci un esempio numerico a supporto.`;
+                    question.correct = result;
+                    break;
+                
+                // Q2: Conversione Esadecimale a Decimale + Teoria
+                case 1:
+                    num1 = randInt(256, 1024);
+                    const hexInput = num1.toString(16).toUpperCase();
+                    result = num1.toString();
+                    type = 'Base (16->10)';
+                    question.text = `**PARTE PRATICA:** Converti il numero Esadecimale **${hexInput}** in **Decimale** (base 10).
+                        **PARTE TEORICA:** Confronta l'uso della base 16 (Esadecimale) rispetto alla base 2 (Binario) nell'ambito della programmazione a basso livello. Perché l'Esadecimale è preferito per la rappresentazione di grandi indirizzi di memoria (es. in architettura x64)?`;
+                    question.correct = result;
+                    break;
+
+                // Q3: Frazione Binaria a Decimale + Teoria
+                case 2:
+                    const fracNum = generateBinaryFractional(5, 5);
+                    result = fracNum.decimal.toFixed(3);
+                    type = 'Frazione (2->10)';
+                    question.text = `**PARTE PRATICA:** Dato il numero Binario con la virgola **${fracNum.binary}**, calcola il suo equivalente in Base **DECIMALE** (risultato con 3 cifre decimali, separatore punto).
+                        **PARTE TEORICA:** Descrivi il concetto di **errore di rappresentazione** nelle frazioni binarie. Fornisci un esempio di un numero decimale che **non può** essere rappresentato esattamente in binario anche con molti bit frazionari e spiega il motivo.`;
+                    question.correct = result;
+                    break;
+
+                // Q4: Decimale a Romani + Teoria
+                case 3:
+                    num1 = randInt(100, 999);
+                    result = decToRoman(num1);
+                    type = 'Romani (10->R)';
+                    question.text = `**PARTE PRATICA:** Converti il numero Decimale **${num1}** nel suo equivalente in **Numeri Romani**.
+                        **PARTE TEORICA:** Spiega perché i Numeri Romani non sono un sistema di numerazione **posizionale** come il Decimale o il Binario. Quali sono le due regole fondamentali (additiva e sottrattiva) e perché quella sottrattiva introduce ambiguità che non esistono nei sistemi posizionali?`;
+                    question.correct = result;
+                    break;
+
+                // Q5: Operazione Binaria (Addizione) + Teoria
+                case 4:
+                    num1 = randInt(10, 30);
+                    num2 = randInt(5, 20);
+                    const binSum = num1 + num2;
+                    result = binSum.toString(2);
+                    type = 'Addizione Binaria';
+                    question.text = `**PARTE PRATICA:** Calcola la somma Binaria di **${num1.toString(2)}** + **${num2.toString(2)}**. Fornisci il risultato in Binario.
+                        **PARTE TEORICA:** In un'architettura CPU, come viene rilevato e gestito il flag di **Overflow** durante un'operazione di addizione binaria? Descrivi la condizione logica che indica un overflow (XOR tra i riporti in ingresso e in uscita del bit più significativo).`;
+                    question.correct = result;
+                    break;
+
+                // Q6: Networking (Base, Rete ID, Broadcast) + Teoria
+                case 5:
+                    const ipNet = randInt(1, 254);
+                    const ipHost = randInt(1, 254);
+                    mask = randInt(20, 28);
+                    ip = `192.168.${ipNet}.${ipHost}`;
+                    const netIDs = calculateNetworkIDs(ip, mask);
+                    result = `${netIDs.network}, ${netIDs.broadcast}, ${netIDs.mask}`;
+                    type = 'Networking (Base)';
+                    question.text = `**PARTE PRATICA:** Data la coppia IP/CIDR **${ip}/${mask}**, determina: 1) L'**Indirizzo di Rete**, 2) L'**Indirizzo di Broadcast** e 3) La **Subnet Mask** in decimale puntato.
+                        **PARTE TEORICA:** Spiega il concetto di **CIDR (Classless Inter-Domain Routing)** in contrasto con l'indirizzamento Classful. Perché l'introduzione del CIDR è stata cruciale per risolvere il problema dell'esaurimento degli indirizzi IPv4?`;
+                    question.correct = result;
+                    break;
+                
+                // Q7: Complemento a Due (Decimale Negativo a C2) + Teoria (Solo per D, altrimenti Base Conversion)
+                case 6:
+                    if (type === 'D') {
+                        num1 = randInt(-127, -1);
+                        result = toTwosComplement(num1);
+                        type = 'Complemento a 2';
+                        question.text = `**PARTE PRATICA:** Rappresenta il numero Decimale **${num1}** in **Complemento a Due** a 8 bit.
+                            **PARTE TEORICA:** Descrivi il meccanismo logico del Complemento a Due per rappresentare i numeri negativi. Spiega in particolare perché l'intervallo non è simmetrico (es. -128 a 127) e qual è il ruolo del bit più significativo nel Complemento a Uno.`;
+                        question.correct = result;
+                    } else {
+                        // Fallback per A/B/C (Conversione Ottale a Esadecimale)
+                        num1 = randInt(100, 2048);
+                        const octInput = num1.toString(8);
+                        result = num1.toString(16).toUpperCase();
+                        type = 'Base (8->16)';
+                        question.text = `**PARTE PRATICA:** Converti il numero Ottale **${octInput}** in **Esadecimale** (base 16).
+                            **PARTE TEORICA:** Descrivi il **metodo di raggruppamento** e perché Ottale ed Esadecimale sono particolarmente facili da convertire in Binario rispetto al Decimale. Spiega l'importanza di questo metodo per la visualizzazione dei byte nella memoria.`;
+                        question.correct = result;
+                    }
+                    break;
+                
+                // Q8: Floating Point (Decimale a Esponente/Mantissa) + Teoria (Solo per D, altrimenti Base Conversion)
+                case 7:
+                    if (type === 'D') {
+                        num1 = randInt(1, 15) + (randInt(0, 99) / 100); // Es: 8.75
+                        const fp = calculateFloatingPoint(num1);
+                        result = `E=${fp.exponent}, M=${fp.mantissa}`;
+                        type = 'Floating Point';
+                        question.text = `**PARTE PRATICA:** Dato il valore Decimale **${num1}**, calcola l'**Esponente** (valore vero) e la **Mantissa Normalizzata** (14 bit, bit nascosto rimosso) per un sistema semplificato in Base 2.
+                            **PARTE TEORICA:** Spiega i tre componenti fondamentali della notazione Floating Point (Segno, Esponente, Mantissa). Descrivi a cosa serve il **Bias** nell'Esponente e il **Bit Nascosto (Hidden Bit)** nella Mantissa, e perché sono essenziali per massimizzare il range e la precisione.`;
+                        question.correct = result;
+                    } else {
+                        // Fallback per A/B/C (Conversione Binaria a Decimale)
+                        num1 = randInt(512, 1024);
+                        const binInput = num1.toString(2);
+                        result = num1.toString();
+                        type = 'Base (2->10)';
+                        question.text = `**PARTE PRATICA:** Converti il numero Binario **${binInput}** in **Decimale** (base 10).
+                            **PARTE TEORICA:** Spiega in che modo il principio della **notazione posizionale** si applica alla base 2 e come il valore di ogni bit è determinato dalla sua posizione ($2^N$). Descrivi l'importanza del **Most Significant Bit (MSB)** e del **Least Significant Bit (LSB)**.`;
+                        question.correct = result;
+                    }
+                    break;
+                
+                // Q9: Subnetting Avanzato (VLSM/Host) + Teoria (Solo per B/C/D)
+                case 8:
+                    if (type === 'A') { // Fallback per A: Moltiplicazione Binaria
+                        num1 = randInt(5, 15);
+                        num2 = randInt(2, 8);
+                        const binProd = num1 * num2;
+                        result = binProd.toString(2);
+                        type = 'Moltiplicazione Binaria';
+                        question.text = `**PARTE PRATICA:** Calcola la moltiplicazione Binaria di **${num1.toString(2)}** * **${num2.toString(2)}**. Fornisci il risultato in Binario.
+                            **PARTE TEORICA:** Descrivi l'algoritmo di moltiplicazione binaria attraverso i concetti di **shift (scorrimento)** e **addizione**. Qual è l'importanza dell'uso di ALUs dedicate per queste operazioni in termini di velocità e gestione dei bit di riporto parziali?`;
+                        question.correct = result;
+                    } else { // B, C, D: Subnetting Avanzato
+                        ip = `172.${randInt(16, 31)}.${randInt(1, 254)}.${randInt(1, 254)}`; // Classe B privata
+                        mask = randInt(18, 22);
+                        const netIDs = calculateNetworkIDs(ip, mask);
+                        const totalHosts = Math.pow(2, 32 - mask) - 2;
+                        result = `${netIDs.network}, ${netIDs.broadcast}, ${totalHosts}`;
+                        type = 'Subnetting Avanzato';
+                        question.text = `**PARTE PRATICA:** Data la coppia IP/CIDR **${ip}/${mask}**, determina: 1) L'**Indirizzo di Rete**, 2) L'**Indirizzo di Broadcast** e 3) Il **Numero di Host Utilizzabili** in questa sottorete.
+                            **PARTE TEORICA:** Spiega la differenza concettuale tra **VLSM (Variable Length Subnet Mask)** e **FLSM (Fixed Length Subnet Mask)**. Perché il VLSM è fondamentale per l'ottimizzazione dell'uso degli indirizzi IP in reti complesse, riducendo lo spreco?`;
+                        question.correct = result;
+                    }
+                    break;
+                
+                // Q10: Conversione Mista Complessa (Ottale a Binario a Decimale) + Teoria
+                case 9:
+                    num1 = randInt(100, 500);
+                    const octalInput = num1.toString(8);
+                    result = num1.toString();
+                    type = 'Base Mista (8->10)';
+                    question.text = `**PARTE PRATICA:** Converti il numero Ottale **${octalInput}** in **Decimale** (base 10) utilizzando come passaggio intermedio la conversione in **Binario**.
+                        **PARTE TEORICA:** Descrivi il concetto di **Weighted Positional System** applicato all'Ottale. Spiega la differenza tra la conversione diretta da Ottale a Decimale e il metodo che usa il Binario come ponte, specificando quando quest'ultimo è più efficiente.`;
+                    question.correct = result;
+                    break;
+                
+                // Q11: Conversione Mista Complessa (Esadecimale a Binario a Ottale) + Teoria
+                case 10:
+                    num1 = randInt(4096, 65535);
+                    const hexInput2 = num1.toString(16).toUpperCase();
+                    result = num1.toString(8);
+                    type = 'Base Mista (16->8)';
+                    question.text = `**PARTE PRATICA:** Converti il numero Esadecimale **${hexInput2}** in **Ottale** (base 8) utilizzando come passaggio intermedio la conversione in **Binario**.
+                        **PARTE TEORICA:** Nello sviluppo hardware, perché è importante che il numero di bit usati in Esadecimale (4 bit per cifra) e Ottale (3 bit per cifra) si allinei perfettamente con i multipli di bit usati per rappresentare la memoria (es. Byte)? Descrivi come questo riduca la complessità di decodifica dei circuiti.`;
+                    question.correct = result;
+                    break;
+            }
+            return question;
+        }
+
+        // -------------------------------------------------------------------------
+        // LOGICA DI GENERAZIONE ESERCIZI PRINCIPALE
+        // -------------------------------------------------------------------------
+
+        function generateExam(type) {
+            let questions = [];
+            const allQuestions = [];
+
+            for (let i = 0; i < window.MAX_POINTS; i++) {
+                allQuestions.push(generateMixedQuestion(i));
+            }
+
+            // Selezione delle 11 domande in base al tipo di verifica
+            // Le domande sono ordinate per complessità crescente (0-10)
+
+            if (type === 'A') {
+                // Solo Sistemi di Numerazione Base (Q1-Q8)
+                // Usiamo un mix delle domande più semplici
+                const indicesA = [0, 1, 2, 3, 4, 5, 7, 8, 9, 10];
+                questions = allQuestions.filter((q, i) => i !== 6); // Rimuoviamo C2 e Floating Point (Q6, Q7) per A
+                questions = questions.filter((q, i) => i < 11).slice(0, 11); // Prendi i primi 11 (max)
+            } else if (type === 'B' || type === 'C') {
+                // A + Networking Base. Rimuoviamo i concetti avanzati (C2, FP) e li sostituiamo col Networking.
+                // Q0-Q5 (Base/Op), Q6 (Networking Base), Q7 (Networking Avanzato, che funge da VLSM)
+                const indicesBC = [0, 1, 2, 3, 4, 5, 8, 9, 10];
+                questions = allQuestions.filter((q, i) => i !== 6 && i !== 7); // Rimuovi C2 e FP
+                questions = questions.slice(0, 11); // Prendi i primi 11 (già mixati con Networking in Q5, Q8, Q10)
+            } else if (type === 'D') {
+                // Riepilogo Completo (Tutte e 11)
+                questions = allQuestions;
+            }
+
+            // Mescola le domande (algoritmo Fisher-Yates per assicurare casualità)
+            for (let i = questions.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [questions[i], questions[j]] = [questions[j], questions[i]];
+            }
+
+            return questions;
+        }
+
+
+        // -------------------------------------------------------------------------
+        // LOGICA PDF E FIREBASE
+        // -------------------------------------------------------------------------
+
+        // 1. Funzione per creare la struttura HTML per la stampa
+        function createPrintHTML(examData, isStudentView) {
+            const studentName = examData.studentName.toUpperCase();
+            const examType = `VERIFICA ${examData.examType}`;
+            const date = examData.examDate;
+            const className = examData.className;
+
+            let html = `
+                <div class="print-header flex justify-between items-center mb-6">
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-800">Istituto Tecnico Superiore - Informatica</h1>
+                        <p class="text-sm text-gray-600">Docente: Prof. Giuseppe Borzumati | Anno Scolastico: ${new Date().getFullYear()}/${new Date().getFullYear() + 1}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm font-bold text-indigo-700">${examType} - ID Prova: ${examData.id.substring(0, 8)}</p>
+                        <p class="text-sm">Data: ${date} | Classe: ${className}</p>
+                    </div>
+                </div>
+                
+                <div class="mb-6 pb-4 border-b border-gray-300">
+                    <p class="text-lg font-bold text-gray-800 mb-2">Studente: ${studentName} ${examData.studentSurname.toUpperCase()}</p>
+                    ${isStudentView ? '<p class="text-md text-red-600 font-semibold">Istruzioni: Rispondere a tutte le domande. Tempo stimato: 60 minuti. Scrivere in modo leggibile negli spazi sottostanti. Ogni risposta corretta vale 1 punto. Voto finale = (Punti / 11) * 10.</p>' : ''}
+                </div>
+
+                <div class="space-y-4" style="counter-reset: question-counter;">
+            `;
+
+            examData.questions.forEach((q, index) => {
+                html += `
+                    <div class="question-item">
+                        <div class="question-text">${q.text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</div>
+                        ${isStudentView ? '<span class="answer-line"></span><span class="answer-line"></span><span class="answer-line"></span>' : ''}
+                        ${!isStudentView ? `<div class="solution-box">**Soluzione Pratica:** ${q.correct} | **Punti:** 1</div>` : ''}
+                    </div>
+                `;
+            });
+
+            html += `
+                </div>
+                <div class="mt-8 text-sm text-center text-gray-500">
+                    ${isStudentView ? `<p>Spazio per eventuali calcoli supplementari.</p>` : `<p>Link Correzione (NON stampare in versione studente): <a href="${window.location.origin + window.location.pathname}?examId=${examData.id}" target="_blank" style="color:#6366f1;">${window.location.origin + window.location.pathname}?examId=${examData.id}</a></p>`}
+                </div>
+            `;
+            return html;
+        }
+
+        // 2. Funzione per gestire la generazione del PDF e l'upload su Firestore
+        window.handleGeneration = async (type, isStudentView) => {
+            const studentName = document.getElementById('nome-studente').value.trim();
+            const studentSurname = document.getElementById('cognome-studente').value.trim();
+            const className = document.getElementById('classe-studente').value.trim();
+            const examDate = document.getElementById('data-verifica').value;
+
+            if (!studentName || !studentSurname || !className || !examDate) {
+                console.log("ERRORE: Compila tutti i campi studente/classe/data.");
+                return; // Non usare alert()
+            }
+            
+            window.showLoading();
+
+            try {
+                const examId = generateUniqueID();
+                const questions = generateExam(type);
+
+                const examData = {
+                    id: examId,
+                    teacherId: window.teacherId,
+                    examType: type,
+                    studentName: studentName,
+                    studentSurname: studentSurname,
+                    className: className,
+                    examDate: examDate,
+                    questions: questions,
+                    status: 'generated',
+                    score: 0,
+                    timestamp: new Date().toISOString()
+                };
+
+                // 2a. Salva i dati della verifica (Domande + Soluzioni) su Firestore
+                const examRef = window.doc(window.getExamCollectionRef(), examId);
+                await window.setDoc(examRef, examData);
+                console.log(`Verifica ${examId} salvata con successo. Tipo: ${type}`);
+                
+                // 2b. Aggiorna i link di correzione visualizzati sulla pagina
+                await window.updateLinkContainers();
+
+                // 2c. Genera l'HTML per la stampa
+                const printArea = document.getElementById('print-area');
+                printArea.innerHTML = createPrintHTML(examData, isStudentView);
+
+                // 2d. Attiva la stampa PDF
+                if (isStudentView) {
+                    // Solo per gli alunni, attacca temporaneamente la classe di stampa e stampa
+                    printArea.classList.remove('hidden');
+                    window.print();
+                    printArea.classList.add('hidden');
+                } else {
+                    // Per il docente, non stampa, ma si può vedere la soluzione nei link
+                    // Il link di correzione è già generato e salvato.
+                    console.log(`Link di Correzione/Soluzione (Tipo ${type}): ${window.location.origin + window.location.pathname}?examId=${examId}`);
+                }
+
+            } catch (error) {
+                console.error("Errore nella generazione o nel salvataggio su Firestore:", error);
+                // Non usare alert()
+            } finally {
+                window.hideLoading();
+            }
+        };
+
+        // 3. Funzione per aggiornare il contenitore dei link (chiamata all'avvio e dopo ogni generazione)
+        window.updateLinkContainers = async () => {
+             if (!window.db || !window.teacherId) return;
+
+             try {
+                 const q = window.query(window.getExamCollectionRef(), window.where("teacherId", "==", window.teacherId));
+                 const querySnapshot = await window.getDocs(q);
+
+                 const links = { 'A': [], 'B': [], 'C': [], 'D': [] };
+
+                 querySnapshot.forEach((doc) => {
+                     const data = doc.data();
+                     const linkURL = `${window.location.origin + window.location.pathname}?examId=${data.id}`;
+                     const linkHTML = `
+                         <a href="${linkURL}" target="_blank" class="block p-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm code-font border border-gray-300">
+                             ${data.studentSurname} ${data.studentName} (${data.className}) - ${data.examDate}
+                         </a>
+                     `;
+                     if (links[data.examType]) {
+                         links[data.examType].push({
+                             html: linkHTML,
+                             timestamp: data.timestamp
+                         });
+                     }
+                 });
+
+                 for (const type in links) {
+                     const container = document.getElementById(`link-container-${type}`);
+                     const message = document.getElementById(`link-message-${type}`);
+                     
+                     // Ordina per timestamp (più recente in alto)
+                     links[type].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                     
+                     if (links[type].length > 0) {
+                         message.classList.add('hidden');
+                         container.innerHTML = `<h4 class="text-lg font-semibold text-${type === 'A' ? 'red' : type === 'B' ? 'purple' : type === 'C' ? 'teal' : 'yellow'}-600 border-b border-${type === 'A' ? 'red' : type === 'B' ? 'purple' : type === 'C' ? 'teal' : 'yellow'}-300 pb-1">Link di Correzione Generati (Verifica ${type}):</h4>`;
+                         links[type].forEach(item => container.innerHTML += item.html);
+                     } else {
+                         message.classList.remove('hidden');
+                         message.textContent = `Nessuna verifica di Tipo ${type} generata.`;
+                         container.innerHTML = '';
+                         container.appendChild(message);
+                     }
+                 }
+
+             } catch (error) {
+                 console.error("Errore nel recupero dei link:", error);
+             }
+         };
+
+        // 4. Funzione per caricare la vista di correzione
+        window.loadCorrectionView = async (examId) => {
+            window.showLoading();
+            try {
+                const examRef = window.doc(window.getExamCollectionRef(), examId);
+                const docSnap = await window.getDoc(examRef);
+                
+                if (docSnap.exists()) {
+                    currentExamData = docSnap.data();
+                    document.getElementById('main-view').classList.add('hidden');
+                    document.getElementById('correction-view').classList.remove('hidden');
+                    renderCorrectionForm(currentExamData);
+                    updateFinalGrade(); 
+                } else {
+                    console.log("Verifica non trovata o ID non valido.");
+                    window.location.href = window.location.origin + window.location.pathname; 
+                }
+            } catch (error) {
+                console.error("Errore nel caricamento della correzione:", error);
+                window.location.href = window.location.origin + window.location.pathname; 
+            } finally {
+                window.hideLoading();
+            }
+        };
+
+        // 5. Renderizza il modulo di correzione
+        function renderCorrectionForm(examData) {
+            document.getElementById('corr-student-name').textContent = `${examData.studentName} ${examData.studentSurname}`;
+            document.getElementById('corr-class').textContent = examData.className;
+            document.getElementById('corr-title').textContent = examData.examType;
+
+            const form = document.getElementById('correction-form');
+            form.innerHTML = '';
+            
+            examData.questions.forEach((q, index) => {
+                const isCorrect = examData.corrections ? examData.corrections[index].isCorrect : false;
+                const notes = examData.corrections ? examData.corrections[index].notes : '';
+
+                const questionElement = document.createElement('div');
+                questionElement.className = 'p-5 border-2 rounded-xl shadow-md space-y-3';
+                questionElement.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <p class="text-xl font-bold text-gray-800">${index + 1}. ${q.text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</p>
+                        <div class="flex-shrink-0 ml-4">
+                            <label class="inline-flex items-center cursor-pointer">
+                                <span class="mr-2 text-sm font-semibold ${isCorrect ? 'text-green-600' : 'text-red-600'}">${isCorrect ? 'CORRETTO (1pt)' : 'ERRATO (0pt)'}</span>
+                                <input type="checkbox" data-index="${index}" class="form-checkbox h-6 w-6 text-green-600 rounded border-gray-300 focus:ring-green-500" ${isCorrect ? 'checked' : ''} onchange="updateScore()">
+                            </label>
+                        </div>
+                    </div>
+                    <div class="bg-indigo-50 p-3 rounded-lg code-font text-sm">
+                        <p class="font-bold text-indigo-700">SOLUZIONE ATTESA (Pratica):</p>
+                        <p class="text-indigo-900 break-words">${q.correct}</p>
+                    </div>
+                    <textarea data-index="${index}" placeholder="Note di correzione..." class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 resize-none" rows="2">${notes}</textarea>
+                `;
+                form.appendChild(questionElement);
+            });
+            updateScore(false); // Calcola il punteggio all'avvio
+        }
+
+        // 6. Aggiorna il punteggio e il voto
+        window.updateScore = (save = true) => {
+            let score = 0;
+            const checkBoxes = document.querySelectorAll('#correction-form input[type="checkbox"]');
+            const notes = document.querySelectorAll('#correction-form textarea');
+            
+            const corrections = [];
+
+            checkBoxes.forEach((checkbox, index) => {
+                const isCorrect = checkbox.checked;
+                if (isCorrect) score += 1;
+                
+                // Aggiorna la label
+                const label = checkbox.parentElement.querySelector('span:first-child');
+                if (isCorrect) {
+                    label.textContent = 'CORRETTO (1pt)';
+                    label.classList.remove('text-red-600');
+                    label.classList.add('text-green-600');
+                } else {
+                    label.textContent = 'ERRATO (0pt)';
+                    label.classList.remove('text-green-600');
+                    label.classList.add('text-red-600');
+                }
+
+                corrections.push({
+                    isCorrect: isCorrect,
+                    notes: notes[index].value.trim(),
+                    qIndex: index
+                });
+            });
+
+            document.getElementById('corr-points').textContent = score;
+            
+            // Aggiorna il voto in base al nuovo punteggio
+            updateFinalGrade(score);
+
+            // Salva le correzioni nel database in tempo reale (per non perdere i dati)
+            if (save && currentExamData) {
+                saveCorrectionsToFirestore(score, corrections);
+            }
+        };
+
+        // 7. Funzione per salvare le correzioni in tempo reale
+        async function saveCorrectionsToFirestore(score, corrections) {
+             if (!currentExamData || !window.db) return;
+
+             try {
+                 const examRef = window.doc(window.getExamCollectionRef(), currentExamData.id);
+                 await window.setDoc(examRef, {
+                     score: score,
+                     corrections: corrections,
+                     status: 'corrected',
+                     correctionTimestamp: new Date().toISOString()
+                 }, { merge: true });
+                 console.log("Correzioni salvate con successo.");
+             } catch (error) {
+                 console.error("Errore nel salvataggio delle correzioni:", error);
+             }
+         }
+
+        // 8. Funzione per aggiornare il voto finale
+        window.updateFinalGrade = (currentScore = parseInt(document.getElementById('corr-points').textContent) || 0) => {
+            const maxPoints = window.MAX_POINTS;
+            const writtenScoreBase10 = (currentScore / maxPoints) * 10;
+            const oralScore = parseFloat(document.getElementById('voto-orale').value) || 0;
+            
+            // Voto Scritto (70%) + Voto Orale (30%)
+            const finalGrade = (writtenScoreBase10 * 0.7) + (oralScore * 0.3);
+            
+            document.getElementById('voto-scritto-base').textContent = writtenScoreBase10.toFixed(2);
+            document.getElementById('corr-grade-floored').textContent = Math.floor(finalGrade * 10) / 10; // Arrotonda al primo decimale per difetto
+        };
+
+        // 9. Salva finale e scarica PDF dei risultati
+        window.saveAndDownloadResultsPDF = async () => {
+            window.showLoading();
+            await window.updateScore(true); // Assicurati che i dati siano salvati per l'ultima volta
+            
+            // Prepara l'HTML per il PDF dei Risultati/Commenti
+            const studentName = currentExamData.studentName.toUpperCase();
+            const examType = `VERIFICA ${currentExamData.examType}`;
+            const date = currentExamData.examDate;
+            const className = currentExamData.className;
+            const finalGrade = document.getElementById('corr-grade-floored').textContent;
+            const corrections = currentExamData.corrections || [];
+
+            let html = `
+                <div class="print-header flex justify-between items-center mb-6" style="border-bottom-color:#10b981;">
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-800">Griglia di Valutazione e Commenti</h1>
+                        <p class="text-sm text-gray-600">Docente: Prof. Giuseppe Borzumati | Prova Corretta il: ${new Date().toLocaleDateString('it-IT')}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm font-bold text-green-700">${examType} - ID Prova: ${currentExamData.id.substring(0, 8)}</p>
+                        <p class="text-sm">Classe: ${className}</p>
+                    </div>
+                </div>
+                
+                <div class="mb-6 pb-4 border-b border-gray-300">
+                    <p class="text-lg font-bold text-gray-800">Studente: ${studentName} ${currentExamData.studentSurname.toUpperCase()}</p>
+                    <div class="mt-3 flex space-x-8">
+                        <p class="text-lg font-bold text-blue-700">Punti: ${document.getElementById('corr-points').textContent} / ${window.MAX_POINTS}</p>
+                        <p class="text-lg font-bold text-red-700">VOTO FINALE: ${finalGrade} / 10</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4" style="counter-reset: question-counter;">
+            `;
+
+            currentExamData.questions.forEach((q, index) => {
+                const correction = corrections.find(c => c.qIndex === index) || { isCorrect: false, notes: 'Nessuna nota.' };
+                const statusColor = correction.isCorrect ? '#059669' : '#ef4444'; // Green or Red
+
+                html += `
+                    <div class="question-item" style="border-left-color: ${statusColor};">
+                        <div class="text-sm text-gray-700 font-bold mb-1">Domanda ${index + 1}: <span style="color:${statusColor};">${correction.isCorrect ? 'CORRETTO' : 'ERRATO'} (1 Punto)</span></div>
+                        <div class="question-text text-xs">${q.text.substring(0, 120)}...</div>
+                        <div class="solution-box" style="background-color: #f0fdf4; border-color: #d1fae5; color: #059669;">
+                            <p class="font-bold">Soluzione Pratica Attesa: ${q.correct}</p>
+                        </div>
+                        <div class="mt-2 p-2 rounded-lg" style="background-color: #f3f4f6; border: 1px solid #d1d5db;">
+                            <p class="font-bold text-gray-800">Note Docente:</p>
+                            <p class="text-gray-700">${correction.notes || 'Nessuna nota specifica.'}</p>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `
+                </div>
+                <div class="mt-8 text-sm text-center text-gray-500">
+                    <p>Documento generato per lo studente. Non contiene il link di correzione.</p>
+                </div>
+            `;
+            
+            // Attiva la stampa PDF
+            const printArea = document.getElementById('print-area');
+            printArea.innerHTML = html;
+            printArea.classList.remove('hidden');
+            window.print();
+            printArea.classList.add('hidden');
+            
+            window.hideLoading();
+        };
+
+    </script>
+</body>
+</html>
